@@ -1,0 +1,10 @@
+/build
+/libs
+/include/spectranet
+*.o
+*.tap
+*_np.asm
+*_p.asm
+*.lib
+.ticks_history.txt
+/.idea
