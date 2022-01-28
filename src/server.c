@@ -31,33 +31,6 @@ uint8_t server_init()
     return 0;
 }
 
-uint8_t server_listen()
-{
-    if (gdbserver_state.client_socket)
-    {
-        return 0;
-    }
-
-    if (listen(gdbserver_state.server_socket, 1) < 0)
-    {
-        return 1;
-    }
-
-    gdbserver_state.client_socket = accept(gdbserver_state.server_socket, NULL, NULL);
-    if(gdbserver_state.client_socket <= 0)
-    {
-        return 2;
-    }
-
-    return 0;
-}
-
-static void server_on_disconnect()
-{
-    sockclose(gdbserver_state.client_socket);
-    gdbserver_state.client_socket = 0;
-}
-
 static void write_data_raw(const uint8_t *data, ssize_t len)
 {
     send(gdbserver_state.client_socket, (void*)data, len, 0);
@@ -90,6 +63,42 @@ static void write_packet_bytes(const uint8_t *data, uint8_t num_bytes)
 static void write_packet(const char *data)
 {
     write_packet_bytes((const uint8_t *)data, strlen(data));
+}
+
+uint8_t server_listen()
+{
+    if (gdbserver_state.client_socket)
+    {
+        print42("execution stopped\n");
+        // report we have trapped
+        write_packet("T05thread:p01.01;");
+        return 0;
+    }
+
+    if (listen(gdbserver_state.server_socket, 1) < 0)
+    {
+        return 1;
+    }
+
+    print42("waiting for connections...\n");
+
+    gdbserver_state.client_socket = accept(gdbserver_state.server_socket, NULL, NULL);
+    if(gdbserver_state.client_socket <= 0)
+    {
+        return 2;
+    }
+
+    print42("connected!\n");
+
+    return 0;
+}
+
+static void server_on_disconnect()
+{
+    sockclose(gdbserver_state.client_socket);
+    gdbserver_state.client_socket = 0;
+    print42("client disconnected!\n");
+    server_listen();
 }
 
 static const struct {
@@ -155,6 +164,7 @@ static uint8_t process_packet(char* payload) __z88dk_callee
         case 'c':
         {
             // continue execution
+            print42("resuming execution\n");
             return 0;
         }
         case 'q':
@@ -330,7 +340,7 @@ uint8_t server_iteration()
         case POLLHUP:
         {
             server_on_disconnect();
-            return 0;
+            return 1;
         }
         case POLLIN:
         {
