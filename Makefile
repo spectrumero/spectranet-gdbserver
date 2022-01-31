@@ -1,8 +1,8 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-GDBSERVER_SOURCES=$(wildcard src/*.c)
-GDBSERVER_OBJECTS=$(GDBSERVER_SOURCES:.c=.o)
+GDBSERVER_C_SOURCES=$(wildcard src/*.c)
+GDBSERVER_C_OBJECTS=$(GDBSERVER_C_SOURCES:.c=_c.o)
 GDBSERVER_ASM_SOURCES=$(wildcard src/*.asm)
-GDBSERVER_ASM_OBJECTS=$(GDBSERVER_ASM_SOURCES:.asm=.asm.o)
+GDBSERVER_ASM_OBJECTS=$(GDBSERVER_ASM_SOURCES:.asm=_asm.o)
 INCLUDES=-I$(ROOT_DIR)/include/spectranet -I$(ROOT_DIR)/src
 JUST_PRINT:=$(findstring n,$(MAKEFLAGS))
 
@@ -20,7 +20,7 @@ else
 	DEBUG ?= -debug
 	CFLAGS = +zx $(DEBUG) $(INCLUDES)
 	LINK_FLAGS = -L$(ROOT_DIR)/libs -llibs/libsocket_np.lib -llibs/libspectranet_np.lib
-	BIN_FLAGS = -startup=31 -crt0 src/crt/crt0.asm -subtype=bin
+	BIN_FLAGS = -startup=31 --no-crt -subtype=bin
 	PRG_OBJECTS = src/prg/prg.c
 	LDFLAGS = +zx $(DEBUG) $(LINK_FLAGS)
 	GDBSERVER_FLAGS = -create-app
@@ -28,8 +28,8 @@ endif
 
 all: gdbserver
 
-build/gdbserver: $(GDBSERVER_OBJECTS) $(GDBSERVER_ASM_OBJECTS)
-	$(LD) $(LDFLAGS) $(BIN_FLAGS) -o build/gdbserver $(GDBSERVER_FLAGS) $(GDBSERVER_OBJECTS) $(GDBSERVER_ASM_OBJECTS)
+build/gdbserver: $(GDBSERVER_C_OBJECTS) $(GDBSERVER_ASM_OBJECTS)
+	$(LD) $(LDFLAGS) $(BIN_FLAGS) -o build/gdbserver $(GDBSERVER_FLAGS) $(GDBSERVER_C_OBJECTS) $(GDBSERVER_ASM_OBJECTS)
 
 build:
 	mkdir -p $@
@@ -50,10 +50,10 @@ spectranet-libs: libs/libsocket_np.lib libs/libspectranet_np.lib
 
 gdbserver: build spectranet-libs build/gdbserver
 
-%.o: %.c
+%_c.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-%.asm.o: %.asm
+%_asm.o: %.asm
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 get-size:

@@ -3,7 +3,6 @@
 #include "sockpoll.h"
 #include "utils.h"
 #include "state.h"
-#include "spectranet.h"
 
 #include <string.h>
 
@@ -41,7 +40,7 @@ static void write_str_raw(const char *data)
     send(gdbserver_state.client_socket, (void*)data, strlen(data), 0);
 }
 
-static void write_packet_bytes(const uint8_t *data, uint8_t num_bytes)
+static void write_packet_bytes(const uint8_t *data, uint8_t num_bytes) __z88dk_callee
 {
     size_t i;
 
@@ -60,21 +59,13 @@ static void write_packet_bytes(const uint8_t *data, uint8_t num_bytes)
     write_data_raw(gdbserver_state.w_buffer, num_bytes + 4);
 }
 
-static void write_packet(const char *data)
+void server_write_packet(const char *data) __z88dk_fastcall
 {
     write_packet_bytes((const uint8_t *)data, strlen(data));
 }
 
 uint8_t server_listen()
 {
-    if (gdbserver_state.client_socket)
-    {
-        print42("execution stopped\n");
-        // report we have trapped
-        write_packet("T05thread:p01.01;");
-        return 0;
-    }
-
     if (listen(gdbserver_state.server_socket, 1) < 0)
     {
         return 1;
@@ -93,7 +84,7 @@ uint8_t server_listen()
     return 0;
 }
 
-static void server_on_disconnect()
+void server_on_disconnect()
 {
     sockclose(gdbserver_state.client_socket);
     gdbserver_state.client_socket = 0;
@@ -105,138 +96,88 @@ static const struct {
     const char* request;
     const char* response;
 } queries[] = {
-    {"C",                       "QCp01x.01x"},
-    {"Attached",                "1"},
-    {"Offsets",                 ""},
     {"Supported",               "PacketSize=128;qXfer:features:read+;qXfer:auxv:read+"},
-    {"Symbol",                  "OK"},
-    {"TStatus",                 ""},
-    {"fThreadInfo",             "mp01.01"},
-    {"sThreadInfo",             "l"},
     {NULL,                      NULL},
 };
 
-static void process_query(char *payload) __z88dk_callee
-{
-    if (strstr(payload, "Xfer:features:read") == payload)
-    {
-        write_str_raw(
-            "$l<target version=\"1.0\"><feature name=\"org.gnu.gdb.z80.cpu\">"
-            "<reg name=\"sp\" bitsize=\"16\" type=\"data_ptr\"/>"
-            "<reg name=\"pc\" bitsize=\"16\" type=\"code_ptr\"/>"
-            "<reg name=\"hl\" bitsize=\"16\" type=\"int\"/>"
-            "<reg name=\"de\" bitsize=\"16\" type=\"int\"/>"
-            "<reg name=\"bc\" bitsize=\"16\" type=\"int\"/>"
-            "<reg name=\"af\" bitsize=\"16\" type=\"int\"/>"
-            "<reg name=\"af'\" bitsize=\"16\" type=\"int\"/>"
-            "</feature><architecture>z80</architecture></target>#81");
-        return;
-    }
-    for (uint8_t i = 0; queries[i].request; i++)
-    {
-        if (strcmp(queries[i].request, payload) == 0)
-        {
-            write_packet(queries[i].response);
-            return;
-        }
-    }
-
-    write_packet("");
-}
-
 static void write_error() __z88dk_callee
 {
-    write_packet("E01");
+    server_write_packet("E01");
 }
 
 static void write_ok() __z88dk_callee
 {
-    write_packet("OK");
+    server_write_packet("OK");
 }
 
-#define NMISTACK (0x38FE)
-
-static uint8_t process_packet(char* payload) __z88dk_callee
+static uint8_t process_packet()
 {
+    char* payload = (char*)gdbserver_state.buffer;
+
     char command = *payload++;
     switch (command)
     {
         case 'c':
         {
             // continue execution
-            print42("resuming execution\n");
             return 0;
         }
         case 'q':
         {
-            process_query(payload);
-            return 1;
+            if (strstr(payload, "Xfer:features:read") == payload)
+            {
+                write_str_raw(
+                    "$l<target version=\"1.0\"><feature name=\"org.gnu.gdb.z80.cpu\">"
+                    "<reg name=\"sp\" bitsize=\"16\" type=\"data_ptr\"/>"
+                    "<reg name=\"pc\" bitsize=\"16\" type=\"code_ptr\"/>"
+                    "<reg name=\"hl\" bitsize=\"16\" type=\"int\"/>"
+                    "<reg name=\"de\" bitsize=\"16\" type=\"int\"/>"
+                    "<reg name=\"bc\" bitsize=\"16\" type=\"int\"/>"
+                    "<reg name=\"af\" bitsize=\"16\" type=\"int\"/>"
+                    "</feature><architecture>z80</architecture></target>#ba");
+                return 1;
+            }
+
+            for (uint8_t i = 0; queries[i].request; i++)
+            {
+                if (strcmp(queries[i].request, payload) == 0)
+                {
+                    server_write_packet(queries[i].response);
+                    return 1;
+                }
+            }
+
+            goto error;
         }
         case '?':
         {
             // we're always stopped when we're under execution
-            write_packet("T05thread:p01.01;");
-            return 1;
+            server_write_packet("T05thread:p01.01;");
+            break;
         }
         case 'g':
         {
-            uint16_t regs[7];
-
-            // sp
-            uint16_t sp = *(uint16_t*)NMISTACK;
-            regs[0] = sp + 2;
-            // pc
-            regs[1] = *(uint16_t*)(sp);
-            // hl
-            regs[2] = *(uint16_t*)(NMISTACK - 6);
-            // de
-            regs[3] = *(uint16_t*)(NMISTACK - 8);
-            // bc
-            regs[4] = *(uint16_t*)(NMISTACK - 10);
-            // af
-            regs[5] = *(uint16_t*)(NMISTACK - 12);
-            // afalt
-            regs[6] = *(uint16_t*)(NMISTACK - 14);
-
             // dump registers
-            to_hex(regs, gdbserver_state.buffer, 14);
-            write_packet_bytes(gdbserver_state.buffer, 28);
-            return 1;
+            to_hex(gdbserver_state.registers, gdbserver_state.buffer, REGISTERS_COUNT * 2);
+            write_packet_bytes(gdbserver_state.buffer, REGISTERS_COUNT * 4);
+            break;
         }
         case 'G':
         {
             // set registers
-
-            uint16_t regs[7];
-            from_hex(payload, regs, 28);
-
-            // sp
-            uint16_t sp = regs[0];
-            sp -= 2;
-            // pc
-            *(uint16_t*)(sp) = regs[1];
-            *(uint16_t*)NMISTACK = sp;
-            // hl
-            *(uint16_t*)(NMISTACK - 6) = regs[2];
-            // de
-            *(uint16_t*)(NMISTACK - 8) = regs[3];
-            // bc
-            *(uint16_t*)(NMISTACK - 10) = regs[4];
-            // af
-            *(uint16_t*)(NMISTACK - 12) = regs[5];
-            // afalt
-            *(uint16_t*)(NMISTACK - 14) = regs[6];
-
+            from_hex(payload, gdbserver_state.registers, REGISTERS_COUNT * 4);
             write_ok();
-            return 1;
+            break;
         }
         case 'm':
         {
             // read memory
+            // 8000,38
+
             char* comma = strchr(payload, ',');
             if (comma == NULL)
             {
-                write_error();
+                goto error;
             }
             else
             {
@@ -246,35 +187,89 @@ static uint8_t process_packet(char* payload) __z88dk_callee
                 to_hex(mem_offset, gdbserver_state.buffer, mem_size);
                 write_packet_bytes(gdbserver_state.buffer, mem_size * 2);
             }
-            return 1;
+            break;
         }
         case 'M':
         {
             // write memory
-            char* colon = strchr(payload, ':');
+            // 8000,38:<hex>
+
             char* comma = strchr(payload, ',');
-            if (comma == NULL || colon == NULL)
+            if (comma == NULL)
             {
-                write_error();
+                goto error;
+            }
+            char* colon = strchr(comma, ':');
+            if (colon == NULL)
+            {
+                goto error;
+            }
+
+            uint8_t* mem_offset = (uint8_t*)from_hex_str(payload, comma - payload);
+            uint16_t mem_size = from_hex_str(comma + 1, colon - comma - 1);
+            from_hex(colon + 1, gdbserver_state.buffer, mem_size * 2);
+            memcpy((uint8_t*)mem_offset, gdbserver_state.buffer, mem_size);
+            write_ok();
+            break;
+        }
+        case 'Z':
+        case 'z':
+        {
+            // place or delete a breakpoint
+
+            // ignore type and expect comma after type
+            payload++;
+            if (*payload != ',')
+            {
+                goto error;
+            }
+            payload++;
+
+            char* comma = strchr(payload, ',');
+            if (comma == NULL)
+            {
+                goto error;
+            }
+
+            uint16_t address = from_hex_str(payload, comma - payload);
+
+            if (command == 'z')
+            {
+                goto error;
             }
             else
             {
-                uint8_t* mem_offset = (uint8_t*)from_hex_str(payload, comma - payload);
-                comma++;
-                colon++;
-                uint16_t mem_size = from_hex_str(comma, colon - comma);
-                from_hex(colon, gdbserver_state.buffer, mem_size);
-                memcpy((uint8_t*)mem_offset, gdbserver_state.buffer, mem_size);
-                write_ok();
+                for (uint8_t i = 0; i < MAX_BREAKPOINTS_COUNT; i++)
+                {
+                    struct breakpoint_t* b = &gdbserver_state.breakpoints[i];
+                    if (b->address)
+                    {
+                        continue;
+                    }
+
+                    b->address = address;
+                    b->original_instruction = *(uint8_t*)address;
+                    *(uint8_t*)address = 0xCF; // RST 08h
+                    write_ok();
+                    return 1;
+                }
             }
-            return 1;
+
+            goto error;
+        }
+        default:
+        {
+            goto error;
         }
     }
 
     return 1;
+error:
+    write_error();
+    return 1;
 }
 
-static uint8_t server_read_data()
+uint8_t server_read_data()
 {
     char in;
     if (recv(gdbserver_state.client_socket, &in, 1, 0) <= 0)
@@ -313,7 +308,7 @@ static uint8_t server_read_data()
 
                     if (checksum_value == sent_checksum)
                     {
-                        return process_packet((char*)gdbserver_state.buffer);
+                        return process_packet();
                     }
                     else
                     {
@@ -333,22 +328,3 @@ static uint8_t server_read_data()
     return 1;
 }
 
-uint8_t server_iteration()
-{
-    switch (poll_fd(gdbserver_state.client_socket))
-    {
-        case POLLHUP:
-        {
-            server_on_disconnect();
-            return 1;
-        }
-        case POLLIN:
-        {
-            return server_read_data();
-        }
-        default:
-        {
-            return 1;
-        }
-    }
-}

@@ -21,7 +21,7 @@ for line in fileinput.input():
         continue
 
     if head == 0:
-        if entry_ == "start":
+        if entry_ == "module_header":
             head = size_
         else:
             continue
@@ -37,7 +37,7 @@ for line in fileinput.input():
         continue
 
     if diff >= 8:
-        entries.append((last_item, diff))
+        entries.append((last_item, (diff, size_)))
         sum += diff
 
     last_size = size_
@@ -47,8 +47,8 @@ l_total = 0
 
 for key, value in sorted(entries, key=lambda x: x[1], reverse=True):
     if key and not key.startswith("_"):
-        l_total += value
-    print("{0}: {1}".format(key, value))
+        l_total += value[0]
+    print("{0}: {1} (${2:02x}...${3:02x})".format(key, value[0], value[1], value[1] + value[0]))
 
 print("L: {0}".format(l_total))
 print("Sum: {0}".format(sum))
