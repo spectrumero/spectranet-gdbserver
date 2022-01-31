@@ -19,12 +19,12 @@ struct breakpoint_t {
 };
 
 /*
- * Beware, only 1022 bytes are available
+ * Beware, only 1021 bytes are available
  */
 struct gdbserver_state_t
 {
     uint16_t registers[REGISTERS_COUNT]; /* sp, pc, hl, de, bc, af */
-    uint8_t rst8_handler[64];
+    uint8_t rst8_handler[72];
     int server_socket;
     int client_socket;
     struct {

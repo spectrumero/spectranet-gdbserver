@@ -1,23 +1,14 @@
 include "../include/spectranet.inc"
 include "../include/sysvars.inc"
 
-defc gdbserver_state = 0x3B02
-defc gdbserver_registers = gdbserver_state + 0
-
-defc gdbserver_register_sp = gdbserver_registers
-defc gdbserver_register_pc = gdbserver_registers + 2
-defc gdbserver_register_hl = gdbserver_registers + 4
-defc gdbserver_register_de = gdbserver_registers + 6
-defc gdbserver_register_bc = gdbserver_registers + 8
-defc gdbserver_register_af = gdbserver_registers + 10
-
-defc gdbserver_rst8_handler = gdbserver_state + 12
-defc gdbserver_sockets = gdbserver_rst8_handler + 64
-defc gdbserver_trap_handler = gdbserver_sockets + 4
+include "vars.inc"
 
 # this is just a blob of data, this is never called directly
 # when it is executed, it is located at 0x3B02
 rst8h_handler_src:
+    ld hl, v_rst8_handler
+    ld (hl), 1
+
     # restore af undef name of hl
     pop hl
     ld (gdbserver_register_af), hl
@@ -66,12 +57,18 @@ rst8h_handler_src:
     ld hl, (gdbserver_register_pc)
     push hl
 
+    ld hl, v_rst8_handler
+    ld (hl), 0
+
     # restore hl
     ld hl, (gdbserver_register_hl)
 
     # pc is on the stack
     ret
 rst8h_handler_src_end:
+
+STR_installed:
+    defb "*** GDBSERVER INSTALLED ***\nPress NMI, then attach on port 1667.\n", 0
 
 global gdbserver_install
 gdbserver_install:
@@ -98,8 +95,12 @@ gdbserver_install:
     ld hl, gdbserver_rst8_handler
     ld (v_rst8vector), hl
 
-    # trip ourselves
-    rst 0x08
+    # handle nmi
+    ld a, (v_pgb)
+    ld (v_nmipage), a
+
+    ld hl, STR_installed
+    call PRINT42
 
     jp EXIT_SUCCESS
 

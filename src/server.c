@@ -96,7 +96,7 @@ static const struct {
     const char* request;
     const char* response;
 } queries[] = {
-    {"Supported",               "PacketSize=128;qXfer:features:read+;qXfer:auxv:read+"},
+    {"Supported",               "PacketSize=128;NonBreakable;qXfer:features:read+;qXfer:auxv:read+"},
     {NULL,                      NULL},
 };
 

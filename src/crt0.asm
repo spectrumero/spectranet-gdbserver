@@ -19,7 +19,11 @@ defc __SYSVAR_BORDCR = 23624
 defc CONSOLE_ROWS = 24
 defc CONSOLE_COLUMNS = 40
 defc __debug_framepointer = 0x3B00
-defc _gdbserver_state = 0x3B02
+
+include "vars.inc"
+# export to C
+defc _gdbserver_state = gdbserver_state
+
 
 module_header:
     org 0x2000
@@ -28,7 +32,7 @@ module_header:
     defw reset              ; The RESET vector - call a routine labeled reset.
     defw 0xFFFF             ; MOUNT vector - not used by this module
     defw 0xFFFF             ; Reserved
-    defw 0xFFFF             ; Address of NMI routine
+    defw nmi_handler        ; Address of NMI routine
     defw 0xFFFF             ; Reserved
     defw 0xFFFF             ; Reserved
     defw STR_identity       ; Address of the identity string.
@@ -39,6 +43,55 @@ modulecall:
     extern _modulecall
     call _modulecall
     call F_restorescreen
+    ret
+
+nmi_handler:
+    ld a, (v_rst8_handler)
+    jr z, nmi_handler_done
+
+    # sp
+    ld hl, (NMISTACK)
+    ld (gdbserver_register_sp), hl
+
+    # pc
+    ld c, (hl)
+    inc hl
+    ld b, (hl)
+    ld (gdbserver_register_pc), bc
+
+    # rest of registers
+    ld hl, (NMISTACK-6)
+    ld (gdbserver_register_hl), hl
+    ld hl, (NMISTACK-8)
+    ld (gdbserver_register_de), hl
+    ld hl, (NMISTACK-10)
+    ld (gdbserver_register_bc), hl
+    ld hl, (NMISTACK-12)
+    ld (gdbserver_register_af), hl
+
+    call modulecall
+
+    ld hl, (gdbserver_register_sp)
+    ld (NMISTACK), hl
+
+    # pc
+    ld a, (gdbserver_register_pc)
+    ld (hl), a
+    inc hl
+    ld a, (gdbserver_register_pc + 1)
+    ld (hl), a
+
+    # rest of registers
+    ld hl, (gdbserver_register_hl)
+    ld (NMISTACK-6), hl
+    ld hl, (gdbserver_register_de)
+    ld (NMISTACK-8), hl
+    ld hl, (gdbserver_register_bc)
+    ld (NMISTACK-10), hl
+    ld hl, (gdbserver_register_af)
+    ld (NMISTACK-12), hl
+
+nmi_handler_done:
     ret
 
 STR_identity:
