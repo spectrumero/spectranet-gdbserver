@@ -27,15 +27,15 @@ struct gdbserver_state_t
     uint8_t rst8_handler[64];
     int server_socket;
     int client_socket;
-    uint8_t buffer[128];
-    uint8_t w_buffer[128];
-    struct breakpoint_t breakpoints[8];
     struct {
         uint8_t page;
         uint16_t handler;
         uint16_t next_address;
         uint16_t address;
     } trap_handler;
+    uint8_t buffer[128];
+    uint8_t w_buffer[128];
+    struct breakpoint_t breakpoints[8];
 };
 
 extern struct gdbserver_state_t gdbserver_state;

@@ -13,6 +13,7 @@ defc gdbserver_register_af = gdbserver_registers + 10
 
 defc gdbserver_rst8_handler = gdbserver_state + 12
 defc gdbserver_sockets = gdbserver_rst8_handler + 64
+defc gdbserver_trap_handler = gdbserver_sockets + 4
 
 # this is just a blob of data, this is never called directly
 # when it is executed, it is located at 0x3B02
@@ -101,3 +102,25 @@ gdbserver_install:
     rst 0x08
 
     jp EXIT_SUCCESS
+
+
+global _set_trap
+_set_trap:
+    call SETTRAP
+    call ENABLETRAP
+    ret
+
+global _reset_trap
+_reset_trap:
+    call DISABLETRAP
+    ret
+
+global _restore_rst08h
+_restore_rst08h:
+    # load instruction address
+    ld hl, (gdbserver_trap_handler+5)
+    # put rst 08 back
+    ld (hl), 0xCF
+    # one time only
+    call DISABLETRAP
+    jp PAGETRAPRETURN

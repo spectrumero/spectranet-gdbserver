@@ -4,10 +4,7 @@
 #include "state.h"
 #include "sockpoll.h"
 
-static void resume_execution()
-{
-    print42("resuming execution\n");
-}
+extern void restore_rst08h();
 
 void modulecall()
 {
@@ -22,6 +19,8 @@ void modulecall()
         return;
     }
 
+    struct breakpoint_t* trapped_breakpoint = NULL;
+
     if (gdbserver_state.client_socket)
     {
         print42("execution stopped\n");
@@ -35,6 +34,8 @@ void modulecall()
             struct breakpoint_t* b = &gdbserver_state.breakpoints[i];
             if (b->address == *pc)
             {
+                trapped_breakpoint = b;
+
                 // restore original instruction
                 *(uint8_t*)b->address = b->original_instruction;
                 break;
@@ -80,5 +81,16 @@ void modulecall()
     }
 
 done:
-    resume_execution();
+    print42("resuming execution\n");
+
+    // we have to restore RST08 on the breakpoint
+    if (trapped_breakpoint && trapped_breakpoint->address == gdbserver_state.registers[REGISTERS_PC])
+    {
+        gdbserver_state.trap_handler.page = 0xFF;
+        gdbserver_state.trap_handler.address = trapped_breakpoint->address;
+        gdbserver_state.trap_handler.next_address = 0x0000;
+        gdbserver_state.trap_handler.handler = (uint16_t)restore_rst08h;
+
+        set_trap(&gdbserver_state.trap_handler);
+    }
 }

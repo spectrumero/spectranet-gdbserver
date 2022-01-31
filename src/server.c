@@ -235,6 +235,21 @@ static uint8_t process_packet()
 
             if (command == 'z')
             {
+                for (uint8_t i = 0; i < MAX_BREAKPOINTS_COUNT; i++)
+                {
+                    struct breakpoint_t* b = &gdbserver_state.breakpoints[i];
+                    if (b->address != address)
+                    {
+                        continue;
+                    }
+
+                    b->address = 0;
+                    // restore original instruction
+                    *(uint8_t*)address = b->original_instruction;
+                    write_ok();
+                    return 1;
+                }
+
                 goto error;
             }
             else
