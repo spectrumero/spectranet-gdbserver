@@ -24,6 +24,9 @@ include "vars.inc"
 # export to C
 defc _gdbserver_state = gdbserver_state
 
+global _set_trap
+defc _set_trap = SETTRAP
+defc _reset_trap = DISABLETRAP
 
 module_header:
     org 0x2000

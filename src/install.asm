@@ -63,8 +63,8 @@ rst8h_handler_src:
     # restore hl
     ld hl, (gdbserver_register_hl)
 
-    # pc is on the stack
-    ret
+    # unpage, its going to call ret for us
+    jp 0x007C
 rst8h_handler_src_end:
 
 STR_installed:
@@ -103,18 +103,6 @@ gdbserver_install:
     call PRINT42
 
     jp EXIT_SUCCESS
-
-
-global _set_trap
-_set_trap:
-    call SETTRAP
-    call ENABLETRAP
-    ret
-
-global _reset_trap
-_reset_trap:
-    call DISABLETRAP
-    ret
 
 global _restore_rst08h
 _restore_rst08h:

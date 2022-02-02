@@ -24,7 +24,7 @@ struct breakpoint_t {
 struct gdbserver_state_t
 {
     uint16_t registers[REGISTERS_COUNT]; /* sp, pc, hl, de, bc, af */
-    uint8_t rst8_handler[72];
+    uint8_t rst8_handler[80];
     int server_socket;
     int client_socket;
     struct {
