@@ -70,10 +70,22 @@ rst8h_handler_src_end:
 STR_installed:
     defb "*** GDBSERVER INSTALLED ***\nPress NMI, then attach on port 1667.\n", 0
 
+STR_install_error:
+    defb "Cannot install. Make sure your spectranet firmware is updated.\n", 0
+
 global gdbserver_install
 gdbserver_install:
     call STATEMENT_END	; Check for statement end.
 
+    ld a, (v_nmipage)
+    cp 0x02
+    jp z, gdbserver_install_ok
+
+    ld hl, STR_install_error
+    call PRINT42
+    jp EXIT_SUCCESS
+
+gdbserver_install_ok:
     # copy rst 8 handler
     ld hl, rst8h_handler_src
     ld de, gdbserver_rst8_handler
