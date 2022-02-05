@@ -46,6 +46,7 @@ Done, you can launch the gdbserver using basic `%gdbserver` command.
 Seeing an error? Make sure you've upgraded your spectranet first!
 
 # How does it work?
+
 It's a Spectranet module, once installed, 
 a BASIC extension `%gdbserver` becomes available.
 
@@ -63,6 +64,13 @@ Then using Spectranet's `ethup` do this to install it on the hardware:
 `ethup <speccy ip> build/gdbserver` 
 
 This will install a gdbserver module. Reboot the machine. Done.
+
+# Limitations
+
+1. You can not place a breakpoint on read-only memory
+2. Programs that use Spectranet need to uses non-paging version, e.g. page in and page out every time Spectranet functions are needed.
+   Otherwise, breakpoints will only work one time and would need to be placed again after each break, if Spectranet is always paged in. 
+3. 128K mode is not supported yet.
 
 # Screenshots
 

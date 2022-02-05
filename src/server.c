@@ -265,6 +265,14 @@ static uint8_t process_packet()
                     b->address = address;
                     b->original_instruction = *(uint8_t*)address;
                     *(uint8_t*)address = 0xCF; // RST 08h
+
+                    if (*(uint8_t*)address != 0xCF)
+                    {
+                        // write didn't do anything, probably read only
+                        b->address = 0;
+                        goto error;
+                    }
+
                     write_ok();
                     return 1;
                 }
