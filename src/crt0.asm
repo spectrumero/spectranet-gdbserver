@@ -10,6 +10,7 @@ global __SYSVAR_BORDCR
 global _clear42
 global _print42
 global module_header
+global nmi_handler
 extern gdbserver_install
 
 defc INITIAL_SP = 0xFFFF

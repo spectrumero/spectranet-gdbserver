@@ -12,3 +12,4 @@ defc gdbserver_register_af = gdbserver_registers + 10
 defc gdbserver_rst8_handler = gdbserver_state + 12
 defc gdbserver_sockets = gdbserver_rst8_handler + 80
 defc gdbserver_trap_handler = gdbserver_sockets + 4
+defc gdbserver_trap_flags = gdbserver_trap_handler + 7

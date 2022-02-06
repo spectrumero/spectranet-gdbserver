@@ -68,7 +68,7 @@ rst8h_handler_src:
 rst8h_handler_src_end:
 
 STR_installed:
-    defb "*** GDBSERVER INSTALLED ***\nPress NMI, then attach on port 1667.\n", 0
+    defb "*** GDBSERVER v0.2 INSTALLED ***\nPress NMI, then attach on port 1667.\n", 0
 
 STR_install_error:
     defb "Cannot install. Make sure your spectranet firmware is updated.\n", 0
@@ -116,12 +116,29 @@ gdbserver_install_ok:
 
     jp EXIT_SUCCESS
 
-global _restore_rst08h
-_restore_rst08h:
+global _gdbserver_trap
+_gdbserver_trap:
+    # one time only
+    call DISABLETRAP
+
+    # restore rst8 on a breakpoint
+    ld a, (gdbserver_trap_flags)
+    and 0x01
+    jr z, gdbserver_trap_skip_restore_rst08
+
     # load instruction address
     ld hl, (gdbserver_trap_handler+5)
     # put rst 08 back
     ld (hl), 0xCF
-    # one time only
-    call DISABLETRAP
+gdbserver_trap_skip_restore_rst08:
+
+    # do a single instruction
+    ld a, (gdbserver_trap_flags)
+    and 0x02
+    jr z, gdbserver_trap_skip_trigger_step
+    # launch the debugger
+    extern nmi_handler
+    call nmi_handler
+gdbserver_trap_skip_trigger_step:
+
     jp PAGETRAPRETURN

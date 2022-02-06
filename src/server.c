@@ -122,6 +122,32 @@ static uint8_t process_packet()
             // continue execution
             return 0;
         }
+        case 's':
+        {
+            // do one step
+            gdbserver_state.trap_flags |= TRAP_FLAG_STEP_INSTRUCTION;
+            return 0;
+        }
+        case 'i':
+        {
+            // step over calls
+            uint8_t offset = *payload - '0'; // simple atoi
+
+            uint16_t address = gdbserver_state.registers[REGISTERS_PC] + offset;
+            gdbserver_state.temporary_breakpoint.address = address;
+            gdbserver_state.temporary_breakpoint.original_instruction = *(uint8_t*)address;
+
+            *(uint8_t*)address = 0xCF; // RST 08h
+
+            if (*(uint8_t*)address != 0xCF)
+            {
+                // write didn't do anything, probably read only
+                gdbserver_state.temporary_breakpoint.address = 0;
+                // so trip as soon as we can
+                gdbserver_state.trap_flags |= TRAP_FLAG_STEP_INSTRUCTION;
+            }
+            return 0;
+        }
         case 'q':
         {
             if (strstr(payload, "Xfer:features:read") == payload)
