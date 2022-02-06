@@ -21,7 +21,9 @@ Beware that this requires latest Spectranet firmware with necessary fixes!
 ### Upgrade Specranet First
 
 1. Go to [Releases](https://github.com/speccytools/spectranet-gdbserver/releases), download `spectranet-patched.firmware` file.
-2. Download [Ethup tool](http://spectrum.alioth.net/doc/index.php/Ethup)
+2. Download Download ethup tool for [linux](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/linux/ethup),
+   [mac](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/mac/ethup),
+   [win32](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/win32/ethup.exe)
 3. Launch your spectrum (with spectranet), press the NMI button
 4. Select "C"
 5. Upload the binary usint ethup: `ethup <spectrum ip> spectranet-patched.firmware 27000`
@@ -35,7 +37,9 @@ is merged, you can go back to vanilla firmware.
 ### Upload gdbserver module
 
 1. Go to [Releases](https://github.com/speccytools/spectranet-gdbserver/releases), download `spectranet-gdbserver.module` file.
-2. Download [Ethup tool](http://spectrum.alioth.net/doc/index.php/Ethup) if you haven't already.
+2. Download ethup tool for [linux](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/linux/ethup),
+   [mac](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/mac/ethup),
+   [win32](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/win32/ethup.exe), if you haven't already.
 3. Launch your spectrum (with spectranet), press the NMI button
 4. Select "B", then select "A"
 5. Upload the binary usint ethup: `ethup <spectrum ip> spectranet-gdbserver.module`
