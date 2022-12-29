@@ -10,7 +10,7 @@ It requires [Spectranet](https://www.bytedelight.com/?page_id=3515) because it o
 # Emulation
 
 Despite Spectranet requirement, it can be run on
-[Fuse](https://github.com/speccytools/fuse/releases/tag/gdbserver) emulator.
+[Fuse for win](https://github.com/speccytools/fuse/releases/latest) or [FuseX for mac](https://github.com/speccytools/fuse-for-macosx/releases/latest) emulator.
 Note that the link refers to fork that supports gdbserver stub on its own,
 so for emulation with Fuse this might be unnecessary.
 
