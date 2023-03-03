@@ -16,38 +16,7 @@ so for emulation with Fuse this might be unnecessary.
 
 # Installation
 
-Beware that this requires latest Spectranet firmware with necessary fixes!
-
-### Upgrade Specranet First
-
-1. Go to [Releases](https://github.com/speccytools/spectranet-gdbserver/releases), download `spectranet-patched.firmware` file.
-2. Download Download ethup tool for [linux](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/linux/ethup),
-   [mac](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/mac/ethup),
-   [win32](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/win32/ethup.exe)
-3. Launch your spectrum (with spectranet), press the NMI button
-4. Select "C"
-5. Upload the binary usint ethup: `ethup <spectrum ip> spectranet-patched.firmware 27000`
-6. Exit by pressing `X`
-7. Enter `RANDOMIZE USR 27000`
-
-Spectranet firmware is upgraded. Note that once
-[this pull request](https://github.com/spectrumero/spectranet/pull/16)
-is merged, you can go back to vanilla firmware.
-
-### Upload gdbserver module
-
-1. Go to [Releases](https://github.com/speccytools/spectranet-gdbserver/releases), download `spectranet-gdbserver.module` file.
-2. Download ethup tool for [linux](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/linux/ethup),
-   [mac](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/mac/ethup),
-   [win32](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/win32/ethup.exe), if you haven't already.
-3. Launch your spectrum (with spectranet), press the NMI button
-4. Select "B", then select "A"
-5. Upload the binary usint ethup: `ethup <spectrum ip> spectranet-gdbserver.module`
-6. Restart spectrum
-
-Done, you can launch the gdbserver using basic `%gdbserver` command.
-
-Seeing an error? Make sure you've upgraded your spectranet first!
+Spectranet releases past `R1002` already have this module preinstalled.
 
 # How does it work?
 
@@ -63,16 +32,22 @@ The NMI button could be pressed mid-execution of your program to examine stuff.
 
 Have z88dk installed, and then do `make`. 
 
-Then using Spectranet's `ethup` do this to install it on the hardware:
+1. Download ethup tool for [linux](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/linux/ethup),
+   [mac](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/mac/ethup),
+   [win32](https://github.com/speccytools/spectranet-gdbserver/raw/master/tools/win32/ethup.exe), if you haven't already.
+2. Launch your spectrum (with spectranet), press the NMI button
+3. Select "B", then select "B" (replace) and Enter number of existing gdbserver module (for example, 9)
+4. Upload the binary using ethup: `ethup <spectrum ip> build/gdbserver__.bin`
+5. Restart spectrum
 
-`ethup <speccy ip> build/gdbserver` 
+Done, you can launch the gdbserver using basic `%gdbserver` command.
 
-This will install a gdbserver module. Reboot the machine. Done.
+Seeing an error? Make sure you've upgraded your spectranet first to at least `R1002` revision!
 
 # Limitations
 
 1. You can not place a breakpoint on read-only memory
-2. Programs that use Spectranet need to uses non-paging version, e.g. page in and page out every time Spectranet functions are needed.
+2. Programs that use Spectranet need to use non-paging version, e.g. page in and page out every time Spectranet functions are needed.
    Otherwise, breakpoints will only work one time and would need to be placed again after each break, if Spectranet is always paged in. 
 3. 128K mode is not supported yet.
 
